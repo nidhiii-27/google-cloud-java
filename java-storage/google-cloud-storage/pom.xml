@@ -514,6 +514,7 @@
                     <exclude>**/Crc32cValueTest.java</exclude>
                     <exclude>**/ITSyncingFileChannelTest.java</exclude>
                     <exclude>**/RewindableByteBufferContentTest.java</exclude>
+                    <exclude>**/StorageITRunnerTest.java</exclude>
                   </testExcludes>
                 </configuration>
               </execution>
