@@ -142,6 +142,7 @@ public final class GrpcStorageOptions extends StorageOptions
   private final GrpcRetryAlgorithmManager retryAlgorithmManager;
   private final java.time.Duration terminationAwaitDuration;
   private final boolean attemptDirectPath;
+  private final boolean attemptDirectPathXdsOverInterconnect;
   private final boolean enableGrpcClientMetrics;
 
   private final boolean grpcClientMetricsManuallyEnabled;
@@ -160,6 +161,7 @@ public final class GrpcStorageOptions extends StorageOptions
             builder.terminationAwaitDuration,
             serviceDefaults.getTerminationAwaitDurationJavaTime());
     this.attemptDirectPath = builder.attemptDirectPath;
+    this.attemptDirectPathXdsOverInterconnect = builder.attemptDirectPathXdsOverInterconnect;
     this.enableGrpcClientMetrics = builder.enableGrpcClientMetrics;
     this.grpcClientMetricsManuallyEnabled = builder.grpcMetricsManuallyEnabled;
     this.grpcInterceptorProvider = builder.grpcInterceptorProvider;
@@ -230,6 +232,13 @@ public final class GrpcStorageOptions extends StorageOptions
    */
   private Tuple<StorageSettings, Opts<UserProject>> resolveSettingsAndOpts() throws IOException {
     String endpoint = getHost();
+    if (attemptDirectPathXdsOverInterconnect) {
+      if ("https://storage.googleapis.com".equals(endpoint)) {
+        endpoint = "https://storage.direct.googleapis.com";
+      } else if ("storage.googleapis.com".equals(endpoint)) {
+        endpoint = "storage.direct.googleapis.com";
+      }
+    }
     URI uri = URI.create(endpoint);
     String scheme = uri.getScheme();
     int port = uri.getPort();
@@ -322,7 +331,8 @@ public final class GrpcStorageOptions extends StorageOptions
         InstantiatingGrpcChannelProvider.newBuilder()
             .setEndpoint(endpoint)
             .setAllowNonDefaultServiceAccount(true)
-            .setAttemptDirectPath(attemptDirectPath);
+            .setAttemptDirectPath(attemptDirectPath || attemptDirectPathXdsOverInterconnect)
+            .setAttemptDirectPathXdsOverInterconnect(attemptDirectPathXdsOverInterconnect);
 
     if (!DIRECT_PATH_BOUND_TOKEN_DISABLED) {
       channelProviderBuilder.setAllowHardBoundTokenTypes(
@@ -335,6 +345,18 @@ public final class GrpcStorageOptions extends StorageOptions
 
     if (attemptDirectPath) {
       channelProviderBuilder.setAttemptDirectPathXds();
+    }
+
+    if (attemptDirectPathXdsOverInterconnect) {
+      com.google.api.core.ApiFunction<ManagedChannelBuilder, ManagedChannelBuilder>
+          existingConfigurator = channelProviderBuilder.getChannelConfigurator();
+      channelProviderBuilder.setChannelConfigurator(
+          channelBuilder -> {
+            if (existingConfigurator != null) {
+              channelBuilder = existingConfigurator.apply(channelBuilder);
+            }
+            return channelBuilder.overrideAuthority("storage.googleapis.com");
+          });
     }
 
     if (scheme.equals("http")) {
@@ -428,6 +450,7 @@ public final class GrpcStorageOptions extends StorageOptions
         retryAlgorithmManager,
         terminationAwaitDuration,
         attemptDirectPath,
+        attemptDirectPathXdsOverInterconnect,
         enableGrpcClientMetrics,
         grpcInterceptorProvider,
         blobWriteSessionConfig,
@@ -445,6 +468,7 @@ public final class GrpcStorageOptions extends StorageOptions
     }
     GrpcStorageOptions that = (GrpcStorageOptions) o;
     return attemptDirectPath == that.attemptDirectPath
+        && attemptDirectPathXdsOverInterconnect == that.attemptDirectPathXdsOverInterconnect
         && enableGrpcClientMetrics == that.enableGrpcClientMetrics
         && Objects.equals(retryAlgorithmManager, that.retryAlgorithmManager)
         && Objects.equals(terminationAwaitDuration, that.terminationAwaitDuration)
@@ -494,6 +518,7 @@ public final class GrpcStorageOptions extends StorageOptions
     private StorageRetryStrategy storageRetryStrategy;
     private java.time.Duration terminationAwaitDuration;
     private boolean attemptDirectPath = GrpcStorageDefaults.INSTANCE.isAttemptDirectPath();
+    private boolean attemptDirectPathXdsOverInterconnect = false;
     private boolean enableGrpcClientMetrics =
         GrpcStorageDefaults.INSTANCE.isEnableGrpcClientMetrics();
     private GrpcInterceptorProvider grpcInterceptorProvider =
@@ -512,6 +537,7 @@ public final class GrpcStorageOptions extends StorageOptions
       this.storageRetryStrategy = gso.getRetryAlgorithmManager().retryStrategy;
       this.terminationAwaitDuration = gso.getTerminationAwaitDuration();
       this.attemptDirectPath = gso.attemptDirectPath;
+      this.attemptDirectPathXdsOverInterconnect = gso.attemptDirectPathXdsOverInterconnect;
       this.enableGrpcClientMetrics = gso.enableGrpcClientMetrics;
       this.grpcInterceptorProvider = gso.grpcInterceptorProvider;
       this.blobWriteSessionConfig = gso.blobWriteSessionConfig;
@@ -553,6 +579,18 @@ public final class GrpcStorageOptions extends StorageOptions
      */
     public GrpcStorageOptions.Builder setAttemptDirectPath(boolean attemptDirectPath) {
       this.attemptDirectPath = attemptDirectPath;
+      return this;
+    }
+
+    /**
+     * Option for whether this client should attempt to use DirectPath over Interconnect (on-premise
+     * xDS name resolution).
+     *
+     * @since 2.45.0
+     */
+    public GrpcStorageOptions.Builder setAttemptDirectPathXdsOverInterconnect(
+        boolean attemptDirectPathXdsOverInterconnect) {
+      this.attemptDirectPathXdsOverInterconnect = attemptDirectPathXdsOverInterconnect;
       return this;
     }
 

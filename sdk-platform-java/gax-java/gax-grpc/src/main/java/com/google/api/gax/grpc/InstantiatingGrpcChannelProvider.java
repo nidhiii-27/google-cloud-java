@@ -151,6 +151,7 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
   @Nullable private final ChannelPrimer channelPrimer;
   @Nullable private final Boolean attemptDirectPath;
   @Nullable private final Boolean attemptDirectPathXds;
+  @Nullable private final Boolean attemptDirectPathXdsOverInterconnect;
   @Nullable private final Boolean allowNonDefaultServiceAccount;
   @VisibleForTesting final ImmutableMap<String, ?> directPathServiceConfig;
   @Nullable private final MtlsProvider mtlsProvider;
@@ -234,6 +235,7 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
     this.channelPrimer = builder.channelPrimer;
     this.attemptDirectPath = builder.attemptDirectPath;
     this.attemptDirectPathXds = builder.attemptDirectPathXds;
+    this.attemptDirectPathXdsOverInterconnect = builder.attemptDirectPathXdsOverInterconnect;
     this.allowNonDefaultServiceAccount = builder.allowNonDefaultServiceAccount;
     this.directPathServiceConfig =
         builder.directPathServiceConfig == null
@@ -262,12 +264,6 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
   @Override
   public boolean needsExecutor() {
     return executor == null;
-  }
-
-  @Nullable
-  @Override
-  public Executor getExecutor() {
-    return executor;
   }
 
   @Deprecated
@@ -431,6 +427,10 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
     return Boolean.parseBoolean(directPathXdsEnv);
   }
 
+  private boolean isAttemptDirectPathXdsOverInterconnect() {
+    return Boolean.TRUE.equals(attemptDirectPathXdsOverInterconnect);
+  }
+
   /**
    * This method tells if Direct Path xDS was enabled. There are two ways of enabling it: via
    * environment variable (by setting GOOGLE_CLOUD_ENABLE_DIRECT_PATH_XDS=true) or when building
@@ -484,7 +484,7 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
                 + " .");
       }
       // Case 4: not running on GCE
-      if (!isOnComputeEngine()) {
+      if (!isOnComputeEngine() && !isAttemptDirectPathXdsOverInterconnect()) {
         LOG.log(
             level,
             "DirectPath is misconfigured. DirectPath is only available in a GCE environment.");
@@ -497,6 +497,10 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
     // DirectPath requires a call credential during gRPC channel construction.
     if (needsCredentials()) {
       return false;
+    }
+    // xDS over Interconnect is designed to work on-premise using arbitrary service credentials.
+    if (isAttemptDirectPathXdsOverInterconnect()) {
+      return true;
     }
     if (allowNonDefaultServiceAccount != null && allowNonDefaultServiceAccount) {
       return true;
@@ -705,6 +709,17 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
 
   @InternalApi("For internal use by google-cloud-java clients only")
   public ManagedChannelBuilder<?> createChannelBuilder() throws IOException {
+    // If the endpoint is already a custom URI scheme target (e.g. google-c2p:///), use it directly.
+    if (endpoint.contains(":///")) {
+      CallCredentials callCreds = MoreCallCredentials.from(credentials);
+      ChannelCredentials channelCreds =
+          GoogleDefaultChannelCredentials.newBuilder()
+              .callCredentials(callCreds)
+              .altsCallCredentials(altsCallCredentials)
+              .build();
+      return Grpc.newChannelBuilder(endpoint, channelCreds);
+    }
+
     int colon = endpoint.lastIndexOf(':');
     if (colon < 0) {
       throw new IllegalStateException("invalid endpoint - should have been validated: " + endpoint);
@@ -726,12 +741,16 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
               .callCredentials(callCreds)
               .altsCallCredentials(altsCallCredentials)
               .build();
-      useDirectPathXds = isDirectPathXdsEnabled();
+      useDirectPathXds = isDirectPathXdsEnabled() || isAttemptDirectPathXdsOverInterconnect();
       if (useDirectPathXds) {
         // google-c2p: CloudToProd(C2P) Directpath. This scheme is defined in
         // io.grpc.googleapis.GoogleCloudToProdNameResolverProvider.
         // This resolver target must not have a port number.
-        builder = Grpc.newChannelBuilder("google-c2p:///" + serviceAddress, channelCreds);
+        String target = "google-c2p:///" + serviceAddress;
+        if (isAttemptDirectPathXdsOverInterconnect()) {
+          target += "?force-xds";
+        }
+        builder = Grpc.newChannelBuilder(target, channelCreds);
       } else {
         builder = Grpc.newChannelBuilderForAddress(serviceAddress, port, channelCreds);
         builder.defaultServiceConfig(directPathServiceConfig);
@@ -862,13 +881,17 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
    * settings and a few other configurations/settings must also be valid for the request to go
    * through DirectPath.
    *
-   * <p>Checks: 1. Credentials are compatible 2.Running on Compute Engine 3. Universe Domain is
-   * configured to for the Google Default Universe
+   * <p>Checks: 1. Credentials are compatible 2. Running on Compute Engine (bypassed if
+   * attemptDirectPathXdsOverInterconnect is enabled) 3. Universe Domain is configured for the
+   * Google Default Universe
    *
    * @return if DirectPath is enabled for the client AND if the configurations are valid
    */
   @InternalApi
   public boolean canUseDirectPath() {
+    if (isAttemptDirectPathXdsOverInterconnect()) {
+      return isDirectPathEnabled() && canUseDirectPathWithUniverseDomain();
+    }
     return isDirectPathEnabled()
         && isCredentialDirectPathCompatible()
         && isOnComputeEngine()
@@ -964,6 +987,7 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
     private ChannelPoolSettings channelPoolSettings;
     @Nullable private Boolean attemptDirectPath;
     @Nullable private Boolean attemptDirectPathXds;
+    @Nullable private Boolean attemptDirectPathXdsOverInterconnect;
     @Nullable private Boolean allowNonDefaultServiceAccount;
     @Nullable private ImmutableMap<String, ?> directPathServiceConfig;
     private List<HardBoundTokenTypes> allowedHardBoundTokenTypes;
@@ -997,6 +1021,7 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
       this.channelPoolSettings = provider.channelPoolSettings;
       this.attemptDirectPath = provider.attemptDirectPath;
       this.attemptDirectPathXds = provider.attemptDirectPathXds;
+      this.attemptDirectPathXdsOverInterconnect = provider.attemptDirectPathXdsOverInterconnect;
       this.allowNonDefaultServiceAccount = provider.allowNonDefaultServiceAccount;
       this.allowedHardBoundTokenTypes = provider.allowedHardBoundTokenTypes;
       this.directPathServiceConfig = provider.directPathServiceConfig;
@@ -1304,6 +1329,14 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
       return this;
     }
 
+    /** Use DirectPath xDS over Interconnect. Bypasses GCP GCE environment checks. */
+    @InternalApi("For internal use by google-cloud-java clients only")
+    public Builder setAttemptDirectPathXdsOverInterconnect(
+        boolean attemptDirectPathXdsOverInterconnect) {
+      this.attemptDirectPathXdsOverInterconnect = attemptDirectPathXdsOverInterconnect;
+      return this;
+    }
+
     @VisibleForTesting
     Builder setEnvProvider(EnvironmentProvider envProvider) {
       this.envProvider = envProvider;
@@ -1458,11 +1491,24 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
   }
 
   private static void validateEndpoint(String endpoint) {
+    if (endpoint.contains(":///")) {
+      try {
+        java.net.URI.create(endpoint);
+        return;
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("invalid endpoint URI: " + endpoint, e);
+      }
+    }
     int colon = endpoint.lastIndexOf(':');
     if (colon < 0) {
       throw new IllegalArgumentException(
           String.format("invalid endpoint, expecting \"<host>:<port>\""));
     }
-    Integer.parseInt(endpoint.substring(colon + 1));
+    try {
+      Integer.parseInt(endpoint.substring(colon + 1));
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException(
+          String.format("invalid endpoint, expecting \"<host>:<port>\""), e);
+    }
   }
 }
