@@ -155,13 +155,6 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
   @Nullable private final Boolean attemptDirectPathXds;
   @Nullable private final Boolean attemptDirectPathXdsOverInterconnect;
   @Nullable private final Boolean allowNonDefaultServiceAccount;
-  private final @Nullable Credentials credentials;
-  private final @Nullable CallCredentials altsCallCredentials;
-  private final @Nullable CallCredentials mtlsS2ACallCredentials;
-  private final @Nullable ChannelPrimer channelPrimer;
-  private final @Nullable Boolean attemptDirectPath;
-  private final @Nullable Boolean attemptDirectPathXds;
-  private final @Nullable Boolean allowNonDefaultServiceAccount;
   @VisibleForTesting final ImmutableMap<String, ?> directPathServiceConfig;
   private final @Nullable MtlsProvider mtlsProvider;
   private final CertificateBasedAccess certificateBasedAccess;
@@ -273,6 +266,12 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
   @Override
   public boolean needsExecutor() {
     return executor == null;
+  }
+
+  @Nullable
+  @Override
+  public Executor getExecutor() {
+    return executor;
   }
 
   @Deprecated
@@ -1001,10 +1000,6 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
     @Nullable private Boolean attemptDirectPathXdsOverInterconnect;
     @Nullable private Boolean allowNonDefaultServiceAccount;
     @Nullable private ImmutableMap<String, ?> directPathServiceConfig;
-    private @Nullable Boolean attemptDirectPath;
-    private @Nullable Boolean attemptDirectPathXds;
-    private @Nullable Boolean allowNonDefaultServiceAccount;
-    private @Nullable ImmutableMap<String, ?> directPathServiceConfig;
     private List<HardBoundTokenTypes> allowedHardBoundTokenTypes;
 
     private Builder() {
