@@ -71,8 +71,7 @@ public final class StorageOptionsBuilderTest {
 
   @Test
   public void grpc_attemptDirectPathXdsOverInterconnect() throws Exception {
-    com.google.auth.Credentials mockCreds =
-        org.mockito.Mockito.mock(com.google.auth.Credentials.class);
+    com.google.auth.Credentials mockCreds = com.google.cloud.NoCredentials.getInstance();
     GrpcStorageOptions options =
         GrpcStorageOptions.grpc()
             .setCredentials(mockCreds)

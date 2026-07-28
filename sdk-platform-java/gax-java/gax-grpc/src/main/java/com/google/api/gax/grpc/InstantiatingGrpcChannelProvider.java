@@ -717,16 +717,22 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
     return s2aChannelCredentials;
   }
 
+  private ChannelCredentials getGoogleDefaultChannelCredentials() {
+    GoogleDefaultChannelCredentials.Builder builder = GoogleDefaultChannelCredentials.newBuilder();
+    if (credentials != null) {
+      builder.callCredentials(MoreCallCredentials.from(credentials));
+    }
+    if (altsCallCredentials != null) {
+      builder.altsCallCredentials(altsCallCredentials);
+    }
+    return builder.build();
+  }
+
   @InternalApi("For internal use by google-cloud-java clients only")
   public ManagedChannelBuilder<?> createChannelBuilder() throws IOException {
     // If the endpoint is already a custom URI scheme target (e.g. google-c2p:///), use it directly.
     if (endpoint.contains(":///")) {
-      CallCredentials callCreds = MoreCallCredentials.from(credentials);
-      ChannelCredentials channelCreds =
-          GoogleDefaultChannelCredentials.newBuilder()
-              .callCredentials(callCreds)
-              .altsCallCredentials(altsCallCredentials)
-              .build();
+      ChannelCredentials channelCreds = getGoogleDefaultChannelCredentials();
       return Grpc.newChannelBuilder(endpoint, channelCreds);
     }
 
@@ -742,15 +748,12 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
     // Check DirectPath traffic.
     boolean useDirectPathXds = false;
     if (canUseDirectPath()) {
-      CallCredentials callCreds = MoreCallCredentials.from(credentials);
-      // altsCallCredentials may be null and GoogleDefaultChannelCredentials
-      // will solely use callCreds. Otherwise it uses altsCallCredentials
-      // for DirectPath connections and callCreds for CloudPath fallbacks.
-      ChannelCredentials channelCreds =
-          GoogleDefaultChannelCredentials.newBuilder()
-              .callCredentials(callCreds)
-              .altsCallCredentials(altsCallCredentials)
-              .build();
+      GoogleDefaultChannelCredentials.Builder channelCredsBuilder =
+          GoogleDefaultChannelCredentials.newBuilder().altsCallCredentials(altsCallCredentials);
+      if (credentials != null) {
+        channelCredsBuilder.callCredentials(io.grpc.auth.MoreCallCredentials.from(credentials));
+      }
+      ChannelCredentials channelCreds = channelCredsBuilder.build();
       useDirectPathXds = isDirectPathXdsEnabled() || isAttemptDirectPathXdsOverInterconnect();
       if (useDirectPathXds) {
         // google-c2p: CloudToProd(C2P) Directpath. This scheme is defined in
