@@ -84,7 +84,7 @@ public final class StorageOptionsBuilderTest {
         () -> assertThat(rebuilt.hashCode()).isEqualTo(options.hashCode()));
 
     com.google.storage.v2.StorageSettings settings = options.getStorageSettings();
-    assertThat(settings.getEndpoint()).isEqualTo("storage.direct.googleapis.com:443");
+    assertThat(settings.getEndpoint()).isEqualTo("storage-direct.googleapis.com:443");
 
     com.google.api.gax.rpc.TransportChannelProvider tcp = settings.getTransportChannelProvider();
     assertThat(tcp).isInstanceOf(com.google.api.gax.grpc.InstantiatingGrpcChannelProvider.class);
