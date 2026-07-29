@@ -15,8 +15,14 @@ inputs:
     description: 'Cache type (maven, gradle, or none)'
     default: 'maven'
   cache-dependency-path:
-    description: 'Optional path to dependency file(s) to search for. Defaults to all pom.xml.'
-    default: '**/pom.xml'
+    description: 'Optional path to dependency file(s) to search for. Defaults to parent POMs and shared dependencies.'
+    default: |
+      pom.xml
+      google-cloud-pom-parent/pom.xml
+      google-cloud-jar-parent/pom.xml
+      gapic-libraries-bom/pom.xml
+      sdk-platform-java/java-shared-dependencies/pom.xml
+      java-shared-config/pom.xml
 runs:
   using: 'composite'
   steps:
