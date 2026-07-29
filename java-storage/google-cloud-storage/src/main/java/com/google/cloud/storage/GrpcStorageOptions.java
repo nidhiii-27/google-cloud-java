@@ -134,6 +134,9 @@ public final class GrpcStorageOptions extends StorageOptions
   private static final String GCS_SCOPE = "https://www.googleapis.com/auth/devstorage.full_control";
   private static final Set<String> SCOPES = ImmutableSet.of(GCS_SCOPE);
   private static final String DEFAULT_HOST = "https://storage.googleapis.com";
+  private static final String DEFAULT_HOST_DIRECT_PATH = "https://storage.direct.googleapis.com";
+  private static final String DEFAULT_HOST_NO_SCHEME = "storage.googleapis.com";
+  private static final String DEFAULT_HOST_DIRECT_PATH_NO_SCHEME = "storage.direct.googleapis.com";
   // If true, disable the bound-token-by-default feature for DirectPath.
   private static final boolean DIRECT_PATH_BOUND_TOKEN_DISABLED =
       Boolean.parseBoolean(
@@ -233,10 +236,18 @@ public final class GrpcStorageOptions extends StorageOptions
   private Tuple<StorageSettings, Opts<UserProject>> resolveSettingsAndOpts() throws IOException {
     String endpoint = getHost();
     if (attemptDirectPathXdsOverInterconnect) {
-      if ("https://storage.googleapis.com".equals(endpoint)) {
-        endpoint = "https://storage.direct.googleapis.com";
-      } else if ("storage.googleapis.com".equals(endpoint)) {
-        endpoint = "storage.direct.googleapis.com";
+      if (endpoint.startsWith(DEFAULT_HOST)
+          && (endpoint.length() == DEFAULT_HOST.length()
+              || endpoint.charAt(DEFAULT_HOST.length()) == ':'
+              || endpoint.charAt(DEFAULT_HOST.length()) == '/')) {
+        endpoint = DEFAULT_HOST_DIRECT_PATH + endpoint.substring(DEFAULT_HOST.length());
+      } else if (endpoint.startsWith(DEFAULT_HOST_NO_SCHEME)
+          && (endpoint.length() == DEFAULT_HOST_NO_SCHEME.length()
+              || endpoint.charAt(DEFAULT_HOST_NO_SCHEME.length()) == ':'
+              || endpoint.charAt(DEFAULT_HOST_NO_SCHEME.length()) == '/')) {
+        endpoint =
+            DEFAULT_HOST_DIRECT_PATH_NO_SCHEME
+                + endpoint.substring(DEFAULT_HOST_NO_SCHEME.length());
       }
     }
     URI uri = URI.create(endpoint);

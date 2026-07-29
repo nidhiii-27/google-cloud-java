@@ -730,80 +730,95 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
 
   @InternalApi("For internal use by google-cloud-java clients only")
   public ManagedChannelBuilder<?> createChannelBuilder() throws IOException {
+    ManagedChannelBuilder<?> builder;
+    boolean useDirectPathXds = false;
+    String resolvedTarget;
+
     // If the endpoint is already a custom URI scheme target (e.g. google-c2p:///), use it directly.
     if (endpoint.contains(":///")) {
       ChannelCredentials channelCreds = getGoogleDefaultChannelCredentials();
-      return Grpc.newChannelBuilder(endpoint, channelCreds);
-    }
-
-    int colon = endpoint.lastIndexOf(':');
-    if (colon < 0) {
-      throw new IllegalStateException("invalid endpoint - should have been validated: " + endpoint);
-    }
-    int port = Integer.parseInt(endpoint.substring(colon + 1));
-    String serviceAddress = endpoint.substring(0, colon);
-
-    ManagedChannelBuilder<?> builder;
-
-    // Check DirectPath traffic.
-    boolean useDirectPathXds = false;
-    if (canUseDirectPath()) {
-      GoogleDefaultChannelCredentials.Builder channelCredsBuilder =
-          GoogleDefaultChannelCredentials.newBuilder().altsCallCredentials(altsCallCredentials);
-      if (credentials != null) {
-        channelCredsBuilder.callCredentials(io.grpc.auth.MoreCallCredentials.from(credentials));
+      builder = Grpc.newChannelBuilder(endpoint, channelCreds);
+      resolvedTarget = endpoint;
+      if (endpoint.startsWith("google-c2p:///")) {
+        useDirectPathXds = true;
+        // Set default keepAliveTime and keepAliveTimeout when directpath environment is enabled.
+        // Will be overridden by user defined values if any.
+        builder.keepAliveTime(DIRECT_PATH_KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS);
+        builder.keepAliveTimeout(DIRECT_PATH_KEEP_ALIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
       }
-      ChannelCredentials channelCreds = channelCredsBuilder.build();
-      useDirectPathXds = isDirectPathXdsEnabled() || isAttemptDirectPathXdsOverInterconnect();
-      if (useDirectPathXds) {
-        // google-c2p: CloudToProd(C2P) Directpath. This scheme is defined in
-        // io.grpc.googleapis.GoogleCloudToProdNameResolverProvider.
-        // This resolver target must not have a port number.
-        String target = "google-c2p:///" + serviceAddress;
-        if (isAttemptDirectPathXdsOverInterconnect()) {
-          target += "?force-xds";
-        }
-        builder = Grpc.newChannelBuilder(target, channelCreds);
-      } else {
-        builder = Grpc.newChannelBuilderForAddress(serviceAddress, port, channelCreds);
-        builder.defaultServiceConfig(directPathServiceConfig);
-      }
-      // Set default keepAliveTime and keepAliveTimeout when directpath environment is enabled.
-      // Will be overridden by user defined values if any.
-      builder.keepAliveTime(DIRECT_PATH_KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS);
-      builder.keepAliveTimeout(DIRECT_PATH_KEEP_ALIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     } else {
-      ChannelCredentials channelCredentials;
-      try {
-        // Try and create credentials via DCA. See https://google.aip.dev/auth/4114.
-        channelCredentials = createMtlsChannelCredentials();
-      } catch (GeneralSecurityException e) {
-        throw new IOException(e);
+      int colon = endpoint.lastIndexOf(':');
+      if (colon < 0) {
+        throw new IllegalStateException(
+            "invalid endpoint - should have been validated: " + endpoint);
       }
-      if (channelCredentials != null) {
-        // Create the channel using channel credentials created via DCA.
-        builder = Grpc.newChannelBuilder(endpoint, channelCredentials);
+      int port = Integer.parseInt(endpoint.substring(colon + 1));
+      String serviceAddress = endpoint.substring(0, colon);
+
+      // Check DirectPath traffic.
+      if (canUseDirectPath()) {
+        ChannelCredentials channelCreds = getGoogleDefaultChannelCredentials();
+        useDirectPathXds = isDirectPathXdsEnabled() || isAttemptDirectPathXdsOverInterconnect();
+        if (useDirectPathXds) {
+          // google-c2p: CloudToProd(C2P) Directpath. This scheme is defined in
+          // io.grpc.googleapis.GoogleCloudToProdNameResolverProvider.
+          // This resolver target must not have a port number.
+          String target = "google-c2p:///" + serviceAddress;
+          if (isAttemptDirectPathXdsOverInterconnect()) {
+            target += "?force-xds";
+          }
+          builder = Grpc.newChannelBuilder(target, channelCreds);
+          resolvedTarget = target;
+        } else {
+          builder = Grpc.newChannelBuilderForAddress(serviceAddress, port, channelCreds);
+          builder.defaultServiceConfig(directPathServiceConfig);
+          resolvedTarget = serviceAddress + ":" + port;
+        }
+        // Set default keepAliveTime and keepAliveTimeout when directpath environment is enabled.
+        // Will be overridden by user defined values if any.
+        builder.keepAliveTime(DIRECT_PATH_KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS);
+        builder.keepAliveTimeout(DIRECT_PATH_KEEP_ALIVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
       } else {
-        // Could not create channel credentials via DCA. In accordance with
-        // https://google.aip.dev/auth/4115, if credentials not available through
-        // DCA, try mTLS with credentials held by the S2A (Secure Session Agent).
-        if (useS2A) {
-          channelCredentials = createS2ASecuredChannelCredentials();
+        if (isDirectPathEnabled() || isAttemptDirectPathXdsOverInterconnect()) {
+          LOG.log(
+              Level.WARNING,
+              "DirectPath was requested but is not available. Falling back to CloudPath.");
+        }
+        ChannelCredentials channelCredentials;
+        try {
+          // Try and create credentials via DCA. See https://google.aip.dev/auth/4114.
+          channelCredentials = createMtlsChannelCredentials();
+        } catch (GeneralSecurityException e) {
+          throw new IOException(e);
         }
         if (channelCredentials != null) {
-          // Create the channel using S2A-secured channel credentials.
-          if (mtlsS2ACallCredentials != null) {
-            // Set {@code mtlsS2ACallCredentials} to be per-RPC call credentials,
-            // which will be used to fetch MTLS_S2A hard bound tokens from the metdata server.
-            channelCredentials =
-                CompositeChannelCredentials.create(channelCredentials, mtlsS2ACallCredentials);
-          }
-          // Connect to the MTLS endpoint when using S2A because S2A is used to perform an MTLS
-          // handshake.
-          builder = Grpc.newChannelBuilder(mtlsEndpoint, channelCredentials);
+          // Create the channel using channel credentials created via DCA.
+          builder = Grpc.newChannelBuilder(endpoint, channelCredentials);
+          resolvedTarget = endpoint;
         } else {
-          // Use default if we cannot initialize channel credentials via DCA or S2A.
-          builder = ManagedChannelBuilder.forAddress(serviceAddress, port);
+          // Could not create channel credentials via DCA. In accordance with
+          // https://google.aip.dev/auth/4115, if credentials not available through
+          // DCA, try mTLS with credentials held by the S2A (Secure Session Agent).
+          if (useS2A) {
+            channelCredentials = createS2ASecuredChannelCredentials();
+          }
+          if (channelCredentials != null) {
+            // Create the channel using S2A-secured channel credentials.
+            if (mtlsS2ACallCredentials != null) {
+              // Set {@code mtlsS2ACallCredentials} to be per-RPC call credentials,
+              // which will be used to fetch MTLS_S2A hard bound tokens from the metdata server.
+              channelCredentials =
+                  CompositeChannelCredentials.create(channelCredentials, mtlsS2ACallCredentials);
+            }
+            // Connect to the MTLS endpoint when using S2A because S2A is used to perform an MTLS
+            // handshake.
+            builder = Grpc.newChannelBuilder(mtlsEndpoint, channelCredentials);
+            resolvedTarget = mtlsEndpoint;
+          } else {
+            // Use default if we cannot initialize channel credentials via DCA or S2A.
+            builder = ManagedChannelBuilder.forAddress(serviceAddress, port);
+            resolvedTarget = serviceAddress + ":" + port;
+          }
         }
       }
     }
@@ -812,6 +827,7 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
       // See https://github.com/googleapis/gapic-generator/issues/2816
       builder.disableServiceConfigLookUp();
     }
+    LOG.log(Level.INFO, "Channel initialized with target {0}", resolvedTarget);
     return builder;
   }
 
@@ -1514,14 +1530,12 @@ public final class InstantiatingGrpcChannelProvider implements TransportChannelP
     }
     int colon = endpoint.lastIndexOf(':');
     if (colon < 0) {
-      throw new IllegalArgumentException(
-          String.format("invalid endpoint, expecting \"<host>:<port>\""));
+      throw new IllegalArgumentException("invalid endpoint, expecting \"<host>:<port>\"");
     }
     try {
       Integer.parseInt(endpoint.substring(colon + 1));
     } catch (NumberFormatException e) {
-      throw new IllegalArgumentException(
-          String.format("invalid endpoint, expecting \"<host>:<port>\""), e);
+      throw new IllegalArgumentException("invalid endpoint, expecting \"<host>:<port>\"", e);
     }
   }
 }

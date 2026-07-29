@@ -37,6 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 import com.google.api.core.ApiFunction;
 import com.google.api.gax.grpc.InstantiatingGrpcChannelProvider.Builder;
@@ -138,23 +140,24 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
 
   @Test
   void testEndpointCustomUriSchemeInvalid() {
+    InstantiatingGrpcChannelProvider.Builder builder =
+        InstantiatingGrpcChannelProvider.newBuilder();
     assertThrows(
-        IllegalArgumentException.class,
-        () -> InstantiatingGrpcChannelProvider.newBuilder().setEndpoint("google-c2p://:invalid"));
+        IllegalArgumentException.class, () -> builder.setEndpoint("google-c2p://:invalid"));
   }
 
   @Test
   void testEndpointNoPort() {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> InstantiatingGrpcChannelProvider.newBuilder().setEndpoint("localhost"));
+    InstantiatingGrpcChannelProvider.Builder builder =
+        InstantiatingGrpcChannelProvider.newBuilder();
+    assertThrows(IllegalArgumentException.class, () -> builder.setEndpoint("localhost"));
   }
 
   @Test
   void testEndpointBadPort() {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> InstantiatingGrpcChannelProvider.newBuilder().setEndpoint("localhost:abcd"));
+    InstantiatingGrpcChannelProvider.Builder builder =
+        InstantiatingGrpcChannelProvider.newBuilder();
+    assertThrows(IllegalArgumentException.class, () -> builder.setEndpoint("localhost:abcd"));
   }
 
   @Test
@@ -723,17 +726,14 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
     InstantiatingGrpcChannelProvider.LOG.setLevel(Level.FINE);
     InstantiatingGrpcChannelProvider.LOG.addHandler(logHandler);
     EnvironmentProvider envProvider =
-        mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
-    Mockito.when(
-            envProvider.getenv(
-                InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
+        mock(EnvironmentProvider.class, withSettings().withoutAnnotations());
+    when(envProvider.getenv(InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
     InstantiatingGrpcChannelProvider provider =
         InstantiatingGrpcChannelProvider.newBuilder()
             .setAttemptDirectPathXds()
             .setAttemptDirectPath(true)
-            .setHeaderProvider(
-                mock(HeaderProvider.class, Mockito.withSettings().withoutAnnotations()))
+            .setHeaderProvider(mock(HeaderProvider.class, withSettings().withoutAnnotations()))
             .setExecutor(mock(Executor.class))
             .setEndpoint(DEFAULT_ENDPOINT)
             .setCertificateBasedAccess(certificateBasedAccess)
@@ -758,18 +758,15 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
     InstantiatingGrpcChannelProvider.LOG.setLevel(Level.FINE);
     InstantiatingGrpcChannelProvider.LOG.addHandler(logHandler);
     EnvironmentProvider envProvider =
-        mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
-    Mockito.when(
-            envProvider.getenv(
-                InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
+        mock(EnvironmentProvider.class, withSettings().withoutAnnotations());
+    when(envProvider.getenv(InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
     InstantiatingGrpcChannelProvider provider =
         InstantiatingGrpcChannelProvider.newBuilder()
             .setAttemptDirectPathXds()
             .setAttemptDirectPath(true)
             .setAllowNonDefaultServiceAccount(true)
-            .setHeaderProvider(
-                mock(HeaderProvider.class, Mockito.withSettings().withoutAnnotations()))
+            .setHeaderProvider(mock(HeaderProvider.class, withSettings().withoutAnnotations()))
             .setExecutor(mock(Executor.class))
             .setEndpoint(DEFAULT_ENDPOINT)
             .setCertificateBasedAccess(certificateBasedAccess)
@@ -983,55 +980,15 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
       throws IOException, InterruptedException {
     System.setProperty("os.name", "Not Linux");
     EnvironmentProvider envProvider =
-        Mockito.mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
-    Mockito.when(
-            envProvider.getenv(
-                InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
+        mock(EnvironmentProvider.class, withSettings().withoutAnnotations());
+    when(envProvider.getenv(InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
-    Credentials credentials =
-        Mockito.mock(Credentials.class, Mockito.withSettings().withoutAnnotations());
+    Credentials credentials = mock(Credentials.class, withSettings().withoutAnnotations());
     final java.util.concurrent.atomic.AtomicReference<String> capturedTarget =
         new java.util.concurrent.atomic.AtomicReference<>();
     ApiFunction<ManagedChannelBuilder, ManagedChannelBuilder> channelConfigurator =
         channelBuilder -> {
-          try {
-            Class<?> nettyBuilderClass = channelBuilder.getClass();
-            java.lang.reflect.Field delegateField = null;
-            while (nettyBuilderClass != null && delegateField == null) {
-              try {
-                delegateField = nettyBuilderClass.getDeclaredField("delegate");
-              } catch (NoSuchFieldException e) {
-                try {
-                  delegateField = nettyBuilderClass.getDeclaredField("managedChannelImplBuilder");
-                } catch (NoSuchFieldException e2) {
-                  nettyBuilderClass = nettyBuilderClass.getSuperclass();
-                }
-              }
-            }
-            if (delegateField != null) {
-              delegateField.setAccessible(true);
-              Object delegate = delegateField.get(channelBuilder);
-              Class<?> delegateClass = delegate.getClass();
-              java.lang.reflect.Field targetField = null;
-              while (delegateClass != null && targetField == null) {
-                try {
-                  targetField = delegateClass.getDeclaredField("target");
-                } catch (NoSuchFieldException e) {
-                  delegateClass = delegateClass.getSuperclass();
-                }
-              }
-              if (targetField != null) {
-                targetField.setAccessible(true);
-                String targetValue = (String) targetField.get(delegate);
-                capturedTarget.set(targetValue);
-              }
-            }
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-          if (capturedTarget.get() == null) {
-            capturedTarget.set(channelBuilder.toString());
-          }
+          capturedTarget.set(extractTargetFromChannelBuilder(channelBuilder));
           return channelBuilder;
         };
 
@@ -1066,53 +1023,14 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
       throws IOException, InterruptedException {
     System.setProperty("os.name", "Not Linux");
     EnvironmentProvider envProvider =
-        Mockito.mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
-    Mockito.when(
-            envProvider.getenv(
-                InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
+        mock(EnvironmentProvider.class, withSettings().withoutAnnotations());
+    when(envProvider.getenv(InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
     final java.util.concurrent.atomic.AtomicReference<String> capturedTarget =
         new java.util.concurrent.atomic.AtomicReference<>();
     ApiFunction<ManagedChannelBuilder, ManagedChannelBuilder> channelConfigurator =
         channelBuilder -> {
-          try {
-            Class<?> nettyBuilderClass = channelBuilder.getClass();
-            java.lang.reflect.Field delegateField = null;
-            while (nettyBuilderClass != null && delegateField == null) {
-              try {
-                delegateField = nettyBuilderClass.getDeclaredField("delegate");
-              } catch (NoSuchFieldException e) {
-                try {
-                  delegateField = nettyBuilderClass.getDeclaredField("managedChannelImplBuilder");
-                } catch (NoSuchFieldException e2) {
-                  nettyBuilderClass = nettyBuilderClass.getSuperclass();
-                }
-              }
-            }
-            if (delegateField != null) {
-              delegateField.setAccessible(true);
-              Object delegate = delegateField.get(channelBuilder);
-              Class<?> delegateClass = delegate.getClass();
-              java.lang.reflect.Field targetField = null;
-              while (delegateClass != null && targetField == null) {
-                try {
-                  targetField = delegateClass.getDeclaredField("target");
-                } catch (NoSuchFieldException e) {
-                  delegateClass = delegateClass.getSuperclass();
-                }
-              }
-              if (targetField != null) {
-                targetField.setAccessible(true);
-                String targetValue = (String) targetField.get(delegate);
-                capturedTarget.set(targetValue);
-              }
-            }
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-          if (capturedTarget.get() == null) {
-            capturedTarget.set(channelBuilder.toString());
-          }
+          capturedTarget.set(extractTargetFromChannelBuilder(channelBuilder));
           return channelBuilder;
         };
 
@@ -1147,55 +1065,15 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
       throws IOException, InterruptedException {
     System.setProperty("os.name", "Not Linux");
     EnvironmentProvider envProvider =
-        Mockito.mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
-    Mockito.when(
-            envProvider.getenv(
-                InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
+        mock(EnvironmentProvider.class, withSettings().withoutAnnotations());
+    when(envProvider.getenv(InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
-    Credentials credentials =
-        Mockito.mock(Credentials.class, Mockito.withSettings().withoutAnnotations());
+    Credentials credentials = mock(Credentials.class, withSettings().withoutAnnotations());
     final java.util.concurrent.atomic.AtomicReference<String> capturedTarget =
         new java.util.concurrent.atomic.AtomicReference<>();
     ApiFunction<ManagedChannelBuilder, ManagedChannelBuilder> channelConfigurator =
         channelBuilder -> {
-          try {
-            Class<?> nettyBuilderClass = channelBuilder.getClass();
-            java.lang.reflect.Field delegateField = null;
-            while (nettyBuilderClass != null && delegateField == null) {
-              try {
-                delegateField = nettyBuilderClass.getDeclaredField("delegate");
-              } catch (NoSuchFieldException e) {
-                try {
-                  delegateField = nettyBuilderClass.getDeclaredField("managedChannelImplBuilder");
-                } catch (NoSuchFieldException e2) {
-                  nettyBuilderClass = nettyBuilderClass.getSuperclass();
-                }
-              }
-            }
-            if (delegateField != null) {
-              delegateField.setAccessible(true);
-              Object delegate = delegateField.get(channelBuilder);
-              Class<?> delegateClass = delegate.getClass();
-              java.lang.reflect.Field targetField = null;
-              while (delegateClass != null && targetField == null) {
-                try {
-                  targetField = delegateClass.getDeclaredField("target");
-                } catch (NoSuchFieldException e) {
-                  delegateClass = delegateClass.getSuperclass();
-                }
-              }
-              if (targetField != null) {
-                targetField.setAccessible(true);
-                String targetValue = (String) targetField.get(delegate);
-                capturedTarget.set(targetValue);
-              }
-            }
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-          if (capturedTarget.get() == null) {
-            capturedTarget.set(channelBuilder.toString());
-          }
+          capturedTarget.set(extractTargetFromChannelBuilder(channelBuilder));
           return channelBuilder;
         };
 
@@ -1640,6 +1518,44 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
         InstantiatingGrpcChannelProvider.newBuilder().setBackgroundExecutor(mockExecutor).build();
 
     assertThat(provider.getBackgroundExecutor()).isEqualTo(mockExecutor);
+  }
+
+  private static String extractTargetFromChannelBuilder(ManagedChannelBuilder<?> channelBuilder) {
+    try {
+      Class<?> nettyBuilderClass = channelBuilder.getClass();
+      java.lang.reflect.Field delegateField = null;
+      while (nettyBuilderClass != null && delegateField == null) {
+        try {
+          delegateField = nettyBuilderClass.getDeclaredField("delegate");
+        } catch (NoSuchFieldException e) {
+          try {
+            delegateField = nettyBuilderClass.getDeclaredField("managedChannelImplBuilder");
+          } catch (NoSuchFieldException e2) {
+            nettyBuilderClass = nettyBuilderClass.getSuperclass();
+          }
+        }
+      }
+      if (delegateField != null) {
+        delegateField.setAccessible(true);
+        Object delegate = delegateField.get(channelBuilder);
+        Class<?> delegateClass = delegate.getClass();
+        java.lang.reflect.Field targetField = null;
+        while (delegateClass != null && targetField == null) {
+          try {
+            targetField = delegateClass.getDeclaredField("target");
+          } catch (NoSuchFieldException e) {
+            delegateClass = delegateClass.getSuperclass();
+          }
+        }
+        if (targetField != null) {
+          targetField.setAccessible(true);
+          return (String) targetField.get(delegate);
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return channelBuilder.toString();
   }
 
   private static class FakeLogHandler extends Handler {
