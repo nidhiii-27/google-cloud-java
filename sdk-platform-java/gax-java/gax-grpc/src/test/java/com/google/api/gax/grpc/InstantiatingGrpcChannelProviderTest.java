@@ -722,7 +722,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
     FakeLogHandler logHandler = new FakeLogHandler();
     InstantiatingGrpcChannelProvider.LOG.setLevel(Level.FINE);
     InstantiatingGrpcChannelProvider.LOG.addHandler(logHandler);
-    EnvironmentProvider envProvider = mock(EnvironmentProvider.class);
+    EnvironmentProvider envProvider =
+        mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
     Mockito.when(
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
@@ -756,7 +757,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
     FakeLogHandler logHandler = new FakeLogHandler();
     InstantiatingGrpcChannelProvider.LOG.setLevel(Level.FINE);
     InstantiatingGrpcChannelProvider.LOG.addHandler(logHandler);
-    EnvironmentProvider envProvider = mock(EnvironmentProvider.class);
+    EnvironmentProvider envProvider =
+        mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
     Mockito.when(
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
@@ -955,7 +957,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
   public void canUseDirectPath_attemptDirectPathXdsOverInterconnect_bypassesGceCheck()
       throws IOException {
     System.setProperty("os.name", "Not Linux");
-    EnvironmentProvider envProvider = Mockito.mock(EnvironmentProvider.class);
+    EnvironmentProvider envProvider =
+        Mockito.mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
     Mockito.when(
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
@@ -978,7 +981,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
   public void getTransportChannel_attemptDirectPathXdsOverInterconnect_usesForceXdsTarget()
       throws IOException, InterruptedException {
     System.setProperty("os.name", "Not Linux");
-    EnvironmentProvider envProvider = Mockito.mock(EnvironmentProvider.class);
+    EnvironmentProvider envProvider =
+        Mockito.mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
     Mockito.when(
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
@@ -1059,7 +1063,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
   public void getTransportChannel_attemptDirectPathXdsOverInterconnect_nullCredentials()
       throws IOException, InterruptedException {
     System.setProperty("os.name", "Not Linux");
-    EnvironmentProvider envProvider = Mockito.mock(EnvironmentProvider.class);
+    EnvironmentProvider envProvider =
+        Mockito.mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
     Mockito.when(
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
@@ -1139,7 +1144,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
   public void getTransportChannel_customResolverTargetUri_usesUriDirectly()
       throws IOException, InterruptedException {
     System.setProperty("os.name", "Not Linux");
-    EnvironmentProvider envProvider = Mockito.mock(EnvironmentProvider.class);
+    EnvironmentProvider envProvider =
+        Mockito.mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
     Mockito.when(
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
