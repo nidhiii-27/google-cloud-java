@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 name: sdk-platform-java Nightly
 on:
   workflow_dispatch:
@@ -16,7 +19,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - run: git config --global core.longpaths true
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-java-cached
         with:
           java-version: ${{ matrix.java }}
@@ -53,7 +58,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - run: git config --global core.longpaths true
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-java-cached
         with:
           java-version: 11

@@ -1,3 +1,6 @@
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -16,8 +19,10 @@ jobs:
     outputs:
       library: ${{ steps.filter.outputs.library }}
     steps:
-    - uses: actions/checkout@v4
-    - uses: dorny/paths-filter@v3
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
+    - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
       id: filter
       with:
         filters: |
@@ -40,7 +45,9 @@ jobs:
         - javadoc # maven-javadoc-plugin
         - javadoc-with-doclet # test javadoc generation with doclet
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        persist-credentials: false
     - uses: ./.github/actions/setup-java-cached
       with:
         distribution: zulu
@@ -77,9 +84,10 @@ jobs:
         job-type:
         - lint  # fmt-maven-plugin and google-java-format
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       with:
         fetch-depth: 0
+        persist-credentials: false
     - uses: ./.github/actions/setup-java-cached
       with:
         distribution: zulu
@@ -131,7 +139,9 @@ jobs:
         - java-datastore
         - java-bigquerystorage
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        persist-credentials: false
     - uses: ./.github/actions/setup-java-cached
       with:
         java-version: 17

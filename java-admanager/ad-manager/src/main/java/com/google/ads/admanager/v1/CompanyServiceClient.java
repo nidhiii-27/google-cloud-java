@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Generated;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 
 // AUTO-GENERATED DOCUMENTATION AND CLASS.
 /**
@@ -63,7 +65,7 @@ import javax.annotation.Generated;
  *    </tr>
  *    <tr>
  *      <td><p> GetCompany</td>
- *      <td><p> API to retrieve a `Company` object.</td>
+ *      <td><p> Retrieves a `Company` object.</td>
  *      <td>
  *      <p>Request object method variants only take one parameter, a request object, which must be constructed before the call.</p>
  *      <ul>
@@ -82,7 +84,7 @@ import javax.annotation.Generated;
  *    </tr>
  *    <tr>
  *      <td><p> ListCompanies</td>
- *      <td><p> API to retrieve a list of `Company` objects.</td>
+ *      <td><p> Lists `Company` objects.</td>
  *      <td>
  *      <p>Request object method variants only take one parameter, a request object, which must be constructed before the call.</p>
  *      <ul>
@@ -141,9 +143,10 @@ import javax.annotation.Generated;
  *
  * <p>Please refer to the GitHub repository's samples for more quickstart code snippets.
  */
+@NullMarked
 @Generated("by gapic-generator-java")
 public class CompanyServiceClient implements BackgroundResource {
-  private final CompanyServiceSettings settings;
+  private final @Nullable CompanyServiceSettings settings;
   private final CompanyServiceStub stub;
 
   /** Constructs an instance of CompanyServiceClient with default settings. */
@@ -183,7 +186,7 @@ public class CompanyServiceClient implements BackgroundResource {
     this.stub = stub;
   }
 
-  public final CompanyServiceSettings getSettings() {
+  public final @Nullable CompanyServiceSettings getSettings() {
     return settings;
   }
 
@@ -193,7 +196,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a `Company` object.
+   * Retrieves a `Company` object.
    *
    * <p>Sample code:
    *
@@ -213,7 +216,7 @@ public class CompanyServiceClient implements BackgroundResource {
    *     `networks/{network_code}/companies/{company_id}`
    * @throws com.google.api.gax.rpc.ApiException if the remote call fails
    */
-  public final Company getCompany(CompanyName name) {
+  public final Company getCompany(@Nullable CompanyName name) {
     GetCompanyRequest request =
         GetCompanyRequest.newBuilder().setName(name == null ? null : name.toString()).build();
     return getCompany(request);
@@ -221,7 +224,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a `Company` object.
+   * Retrieves a `Company` object.
    *
    * <p>Sample code:
    *
@@ -248,7 +251,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a `Company` object.
+   * Retrieves a `Company` object.
    *
    * <p>Sample code:
    *
@@ -276,7 +279,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a `Company` object.
+   * Retrieves a `Company` object.
    *
    * <p>Sample code:
    *
@@ -303,7 +306,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a list of `Company` objects.
+   * Lists `Company` objects.
    *
    * <p>Sample code:
    *
@@ -325,7 +328,7 @@ public class CompanyServiceClient implements BackgroundResource {
    *     `networks/{network_code}`
    * @throws com.google.api.gax.rpc.ApiException if the remote call fails
    */
-  public final ListCompaniesPagedResponse listCompanies(NetworkName parent) {
+  public final ListCompaniesPagedResponse listCompanies(@Nullable NetworkName parent) {
     ListCompaniesRequest request =
         ListCompaniesRequest.newBuilder()
             .setParent(parent == null ? null : parent.toString())
@@ -335,7 +338,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a list of `Company` objects.
+   * Lists `Company` objects.
    *
    * <p>Sample code:
    *
@@ -364,7 +367,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a list of `Company` objects.
+   * Lists `Company` objects.
    *
    * <p>Sample code:
    *
@@ -399,7 +402,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a list of `Company` objects.
+   * Lists `Company` objects.
    *
    * <p>Sample code:
    *
@@ -435,7 +438,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
   // AUTO-GENERATED DOCUMENTATION AND METHOD.
   /**
-   * API to retrieve a list of `Company` objects.
+   * Lists `Company` objects.
    *
    * <p>Sample code:
    *
@@ -533,8 +536,8 @@ public class CompanyServiceClient implements BackgroundResource {
           ListCompaniesRequest, ListCompaniesResponse, Company, ListCompaniesPage> {
 
     private ListCompaniesPage(
-        PageContext<ListCompaniesRequest, ListCompaniesResponse, Company> context,
-        ListCompaniesResponse response) {
+        @Nullable PageContext<ListCompaniesRequest, ListCompaniesResponse, Company> context,
+        @Nullable ListCompaniesResponse response) {
       super(context, response);
     }
 
@@ -544,14 +547,14 @@ public class CompanyServiceClient implements BackgroundResource {
 
     @Override
     protected ListCompaniesPage createPage(
-        PageContext<ListCompaniesRequest, ListCompaniesResponse, Company> context,
-        ListCompaniesResponse response) {
+        @Nullable PageContext<ListCompaniesRequest, ListCompaniesResponse, Company> context,
+        @Nullable ListCompaniesResponse response) {
       return new ListCompaniesPage(context, response);
     }
 
     @Override
     public ApiFuture<ListCompaniesPage> createPageAsync(
-        PageContext<ListCompaniesRequest, ListCompaniesResponse, Company> context,
+        @Nullable PageContext<ListCompaniesRequest, ListCompaniesResponse, Company> context,
         ApiFuture<ListCompaniesResponse> futureResponse) {
       return super.createPageAsync(context, futureResponse);
     }
@@ -565,7 +568,8 @@ public class CompanyServiceClient implements BackgroundResource {
           ListCompaniesPage,
           ListCompaniesFixedSizeCollection> {
 
-    private ListCompaniesFixedSizeCollection(List<ListCompaniesPage> pages, int collectionSize) {
+    private ListCompaniesFixedSizeCollection(
+        @Nullable List<ListCompaniesPage> pages, int collectionSize) {
       super(pages, collectionSize);
     }
 
@@ -575,7 +579,7 @@ public class CompanyServiceClient implements BackgroundResource {
 
     @Override
     protected ListCompaniesFixedSizeCollection createCollection(
-        List<ListCompaniesPage> pages, int collectionSize) {
+        @Nullable List<ListCompaniesPage> pages, int collectionSize) {
       return new ListCompaniesFixedSizeCollection(pages, collectionSize);
     }
   }

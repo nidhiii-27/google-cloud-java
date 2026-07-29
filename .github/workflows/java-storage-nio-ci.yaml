@@ -13,6 +13,9 @@
 # limitations under the License.
 # Github action job to test core java library features on
 # downstream client libraries before they are released.
+permissions:
+  contents: read
+
 on:
   push:
     branches:
@@ -27,7 +30,9 @@ jobs:
     outputs:
       library: ${{ steps.filter.outputs.library }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
     - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
       id: filter
       with:
@@ -49,7 +54,9 @@ jobs:
       matrix:
         java: [11, 17, 21, 25, 26]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
     - uses: ./.github/actions/setup-java-cached
       with:
         java-version: ${{matrix.java}}
@@ -73,7 +80,9 @@ jobs:
     name: "units (8)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup-java-cached
         with:
           java-version: 8
@@ -115,7 +124,9 @@ jobs:
       run: git config --system core.longpaths true
     - name: Support longpaths
       run: git config --system core.longpaths true
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
     - uses: ./.github/actions/setup-java-cached
       with:
         java-version: 8
@@ -137,7 +148,9 @@ jobs:
     if: ${{ needs.filter.outputs.library == 'true' }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
     - uses: ./.github/actions/setup-java-cached
       with:
         java-version: 17
@@ -156,7 +169,9 @@ jobs:
     if: ${{ needs.filter.outputs.library == 'true' }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        persist-credentials: false
     - uses: ./.github/actions/setup-java-cached
       with:
         java-version: 17
@@ -178,9 +193,10 @@ jobs:
     if: ${{ needs.filter.outputs.library == 'true' }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       with:
         fetch-depth: 0
+        persist-credentials: false
     - uses: ./.github/actions/setup-java-cached
       with:
         java-version: 17
