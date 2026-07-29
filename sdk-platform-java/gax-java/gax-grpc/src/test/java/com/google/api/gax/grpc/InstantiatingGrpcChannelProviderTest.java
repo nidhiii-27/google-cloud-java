@@ -963,7 +963,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
-    Credentials credentials = Mockito.mock(Credentials.class);
+    Credentials credentials =
+        Mockito.mock(Credentials.class, Mockito.withSettings().withoutAnnotations());
     InstantiatingGrpcChannelProvider.Builder builder =
         InstantiatingGrpcChannelProvider.newBuilder()
             .setCertificateBasedAccess(certificateBasedAccess)
@@ -987,7 +988,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
-    Credentials credentials = Mockito.mock(Credentials.class);
+    Credentials credentials =
+        Mockito.mock(Credentials.class, Mockito.withSettings().withoutAnnotations());
     final java.util.concurrent.atomic.AtomicReference<String> capturedTarget =
         new java.util.concurrent.atomic.AtomicReference<>();
     ApiFunction<ManagedChannelBuilder, ManagedChannelBuilder> channelConfigurator =
@@ -1150,7 +1152,8 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
             envProvider.getenv(
                 InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
-    Credentials credentials = Mockito.mock(Credentials.class);
+    Credentials credentials =
+        Mockito.mock(Credentials.class, Mockito.withSettings().withoutAnnotations());
     final java.util.concurrent.atomic.AtomicReference<String> capturedTarget =
         new java.util.concurrent.atomic.AtomicReference<>();
     ApiFunction<ManagedChannelBuilder, ManagedChannelBuilder> channelConfigurator =
