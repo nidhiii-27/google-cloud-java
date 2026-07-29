@@ -61,7 +61,22 @@ jobs:
                 curl --location https://github.com/googleapis/gapic-showcase/releases/download/v${SHOWCASE_VERSION}/gapic-showcase-${SHOWCASE_VERSION}-linux-amd64.tar.gz --output /usr/src/showcase/showcase-${SHOWCASE_VERSION}-linux-amd64.tar.gz
                 cd /usr/src/showcase/
                 tar -xf showcase-*
+                # Start standard insecure showcase server on default port 7469 for standard integration tests
                 ./gapic-showcase run &
+                # Start secure TLS showcase server on port 7470 for PQC TLS integration tests
+                ./gapic-showcase run --port 7470 --tls --ca-cert-output-file /tmp/showcase-ca.pem &
+                # Wait deterministically for both background showcase servers to finish binding ports 7469/7470
+                # and writing /tmp/showcase-ca.pem. Starting TLS requires RSA key generation and disk I/O,
+                # which can cause race conditions if tests start before /tmp/showcase-ca.pem is created.
+                for i in $(seq 1 30); do
+                  if (echo > /dev/tcp/127.0.0.1/7469) 2>/dev/null && \
+                     (echo > /dev/tcp/127.0.0.1/7470) 2>/dev/null && \
+                     [ -f /tmp/showcase-ca.pem ]; then
+                    echo "Showcase servers (ports 7469, 7470) and CA cert ready in attempt $i."
+                    break
+                  fi
+                  sleep 0.2
+                done
                 cd -
       - name: Showcase integration tests
         working-directory: java-showcase
@@ -127,13 +142,7 @@ jobs:
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: 'stable'
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
-        with:
-          python-version: "3.12"
-          cache: 'pip'
       - name: Install Librarian and tools
-        env:
-          PYTHONPATH: ${{ github.workspace }}/sdk-platform-java/hermetic_build/library_generation/owlbot
         run: |
           V=$(go run github.com/googleapis/librarian/cmd/librarian@latest config get version)
           echo "Installing librarian version $V"
@@ -166,7 +175,22 @@ jobs:
           curl --location https://github.com/googleapis/gapic-showcase/releases/download/v${SHOWCASE_VERSION}/gapic-showcase-${SHOWCASE_VERSION}-linux-amd64.tar.gz --output /usr/src/showcase/showcase-${SHOWCASE_VERSION}-linux-amd64.tar.gz
           cd /usr/src/showcase/
           tar -xf showcase-*
+          # Start standard insecure showcase server on default port 7469 for standard integration tests
           ./gapic-showcase run &
+          # Start secure TLS showcase server on port 7470 for PQC TLS integration tests
+          ./gapic-showcase run --port 7470 --tls --ca-cert-output-file /tmp/showcase-ca.pem &
+          # Wait deterministically for both background showcase servers to finish binding ports 7469/7470
+          # and writing /tmp/showcase-ca.pem. Starting TLS requires RSA key generation and disk I/O,
+          # which can cause race conditions if tests start before /tmp/showcase-ca.pem is created.
+          for i in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/7469) 2>/dev/null && \
+               (echo > /dev/tcp/127.0.0.1/7470) 2>/dev/null && \
+               [ -f /tmp/showcase-ca.pem ]; then
+              echo "Showcase servers (ports 7469, 7470) and CA cert ready in attempt $i."
+              break
+            fi
+            sleep 0.2
+          done
           cd -
       - name: Showcase integration tests
         working-directory: java-showcase
