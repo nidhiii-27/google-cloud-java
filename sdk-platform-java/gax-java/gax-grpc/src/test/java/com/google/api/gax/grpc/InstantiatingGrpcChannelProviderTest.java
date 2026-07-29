@@ -951,17 +951,13 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
   }
 
   @Test
-  public void canUseDirectPath_attemptDirectPathXdsOverInterconnect_bypassesGceCheck()
-      throws IOException {
+  public void canUseDirectPath_attemptDirectPathXdsOverInterconnect_bypassesGceCheck() {
     System.setProperty("os.name", "Not Linux");
     EnvironmentProvider envProvider =
-        Mockito.mock(EnvironmentProvider.class, Mockito.withSettings().withoutAnnotations());
-    Mockito.when(
-            envProvider.getenv(
-                InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
+        mock(EnvironmentProvider.class, withSettings().withoutAnnotations());
+    when(envProvider.getenv(InstantiatingGrpcChannelProvider.DIRECT_PATH_ENV_DISABLE_DIRECT_PATH))
         .thenReturn("false");
-    Credentials credentials =
-        Mockito.mock(Credentials.class, Mockito.withSettings().withoutAnnotations());
+    Credentials credentials = mock(Credentials.class, withSettings().withoutAnnotations());
     InstantiatingGrpcChannelProvider.Builder builder =
         InstantiatingGrpcChannelProvider.newBuilder()
             .setCertificateBasedAccess(certificateBasedAccess)
@@ -1081,7 +1077,7 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
         InstantiatingGrpcChannelProvider.newBuilder()
             .setCertificateBasedAccess(certificateBasedAccess)
             .setCredentials(credentials)
-            .setEndpoint("google-c2p:///storage.direct.googleapis.com?force-xds")
+            .setEndpoint("google-c2p:///storage-direct.googleapis.com?force-xds")
             .setEnvProvider(envProvider)
             .setChannelConfigurator(channelConfigurator);
 
@@ -1092,14 +1088,14 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
         (InstantiatingGrpcChannelProvider)
             provider
                 .withHeaders(Collections.<String, String>emptyMap())
-                .withEndpoint("google-c2p:///storage.direct.googleapis.com?force-xds");
+                .withEndpoint("google-c2p:///storage-direct.googleapis.com?force-xds");
 
     TransportChannel transportChannel = configuredProvider.getTransportChannel();
     transportChannel.shutdownNow();
     transportChannel.awaitTermination(5, TimeUnit.SECONDS);
 
     Truth.assertThat(capturedTarget.get())
-        .isEqualTo("google-c2p:///storage.direct.googleapis.com?force-xds");
+        .isEqualTo("google-c2p:///storage-direct.googleapis.com?force-xds");
   }
 
   @Test
