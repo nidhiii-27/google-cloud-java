@@ -1,6 +1,0 @@
-{
-  "resources": [
-    { "pattern": ".*.json" },
-    { "pattern": ".*.pem" }
-  ]
-}
